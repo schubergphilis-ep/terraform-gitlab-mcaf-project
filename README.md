@@ -10,13 +10,13 @@ IMPORTANT: We do not pin modules to versions in our examples. We highly recommen
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_gitlab"></a> [gitlab](#requirement\_gitlab) | >= 17.10.0 |
+| <a name="requirement_gitlab"></a> [gitlab](#requirement\_gitlab) | >= 19.0.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | >= 17.10.0 |
+| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | >= 19.0.0 |
 
 ## Modules
 
@@ -31,6 +31,7 @@ No modules.
 | [gitlab_project.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project) | resource |
 | [gitlab_project_approval_rule.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_approval_rule) | resource |
 | [gitlab_project_level_mr_approvals.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_level_mr_approvals) | resource |
+| [gitlab_project_pull_mirror.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_pull_mirror) | resource |
 | [gitlab_project_variable.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_variable) | resource |
 | [gitlab_group.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/group) | data source |
 | [gitlab_group.groups](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/group) | data source |

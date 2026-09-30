@@ -8,6 +8,7 @@ locals {
       groups_allowed_to_unprotect  = []
       merge_access_level           = "developer"
       push_access_level            = "no one"
+      unprotect_access_level       = null
       users_allowed_to_merge       = []
       users_allowed_to_push        = []
       users_allowed_to_unprotect   = []
@@ -42,14 +43,11 @@ resource "gitlab_project" "default" {
   ci_default_git_depth                             = var.ci_default_git_depth
   default_branch                                   = var.default_branch
   description                                      = var.description
-  import_url                                       = var.import_url
-  import_url_password                              = var.import_url_password
-  import_url_username                              = var.import_url_username
+  import_url                                       = var.mirror ? null : var.import_url # Mirrored repositories are configured through gitlab_project_pull_mirror
+  import_url_password                              = var.mirror ? null : var.import_url_password
+  import_url_username                              = var.mirror ? null : var.import_url_username
   initialize_with_readme                           = var.import_url != null ? null : var.initialize_with_readme
   issues_access_level                              = var.issues_access_level
-  mirror                                           = var.mirror ? true : null # We cannot use false here, so either we set true or null
-  mirror_trigger_builds                            = var.mirror ? var.mirror_trigger_builds : null
-  mirror_overwrites_diverged_branches              = var.mirror ? var.mirror_overwrites_diverged_branches : null
   namespace_id                                     = data.gitlab_group.default.id
   only_allow_merge_if_all_discussions_are_resolved = var.only_allow_merge_if_all_discussions_are_resolved
   only_allow_merge_if_pipeline_succeeds            = var.only_allow_merge_if_pipeline_succeeds
@@ -64,6 +62,17 @@ resource "gitlab_project" "default" {
     prevent_secrets         = var.prevent_secrets
     reject_unsigned_commits = var.reject_unsigned_commits
   }
+}
+
+resource "gitlab_project_pull_mirror" "default" {
+  count = var.mirror ? 1 : 0
+
+  project                             = gitlab_project.default.id
+  url                                 = var.import_url
+  auth_user                           = var.import_url_username
+  auth_password                       = var.import_url_password
+  mirror_trigger_builds               = var.mirror_trigger_builds
+  mirror_overwrites_diverged_branches = var.mirror_overwrites_diverged_branches
 }
 
 resource "gitlab_project_variable" "default" {
@@ -140,58 +149,31 @@ resource "gitlab_branch_protection" "default" {
   allow_force_push             = try(each.value.allow_force_push, false)
   branch                       = each.key
   code_owner_approval_required = each.value.code_owner_approval_required
-  merge_access_level           = each.value.merge_access_level
   project                      = gitlab_project.default.id
-  push_access_level            = each.value.push_access_level
-  unprotect_access_level       = try(each.value.unprotect_access_level, null)
 
-  dynamic "allowed_to_merge" {
-    for_each = each.value.users_allowed_to_merge
+  # GitLab provider >= 19.0 no longer accepts merge_access_level, push_access_level and unprotect_access_level on
+  # Enterprise instances. The role based access level is passed as an entry of the allowed_to_* attributes instead.
+  allowed_to_merge = concat(
+    [{ access_level = each.value.merge_access_level }],
+    [for user in each.value.users_allowed_to_merge : { user_id = data.gitlab_user.users[user].id }],
+    [for group in each.value.groups_allowed_to_merge : { group_id = data.gitlab_group.groups[group].id }],
+  )
 
-    content {
-      user_id = data.gitlab_user.users[allowed_to_merge.value].id
-    }
-  }
+  allowed_to_push = concat(
+    [{ access_level = each.value.push_access_level }],
+    [for user in each.value.users_allowed_to_push : { user_id = data.gitlab_user.users[user].id }],
+    [for group in each.value.groups_allowed_to_push : { group_id = data.gitlab_group.groups[group].id }],
+  )
 
-  dynamic "allowed_to_merge" {
-    for_each = each.value.groups_allowed_to_merge
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_merge.value].id
-    }
-  }
-
-  dynamic "allowed_to_push" {
-    for_each = each.value.users_allowed_to_push
-
-    content {
-      user_id = data.gitlab_user.users[allowed_to_push.value].id
-    }
-  }
-
-  dynamic "allowed_to_push" {
-    for_each = each.value.groups_allowed_to_push
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_push.value].id
-    }
-  }
-
-  dynamic "allowed_to_unprotect" {
-    for_each = each.value.users_allowed_to_unprotect
-
-    content {
-      user_id = data.gitlab_user.users[allowed_to_unprotect.value].id
-    }
-  }
-
-  dynamic "allowed_to_unprotect" {
-    for_each = each.value.groups_allowed_to_unprotect
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_unprotect.value].id
-    }
-  }
+  allowed_to_unprotect = length(concat(
+    each.value.unprotect_access_level != null ? [each.value.unprotect_access_level] : [],
+    each.value.users_allowed_to_unprotect,
+    each.value.groups_allowed_to_unprotect,
+    )) == 0 ? null : concat(
+    each.value.unprotect_access_level != null ? [{ access_level = each.value.unprotect_access_level }] : [],
+    [for user in each.value.users_allowed_to_unprotect : { user_id = data.gitlab_user.users[user].id }],
+    [for group in each.value.groups_allowed_to_unprotect : { group_id = data.gitlab_group.groups[group].id }],
+  )
 }
 
 ################################################################################

@@ -83,13 +83,74 @@ run "import_url_with_mirror_true" {
   command = plan
 
   assert {
-    condition     = resource.gitlab_project.default.import_url == "https://example.com/repo.git"
-    error_message = "Expected import_url to be: \"https://example.com/repo.git\", got: \"${resource.gitlab_project.default.import_url}\""
+    condition     = length(resource.gitlab_project_pull_mirror.default) == 1
+    error_message = "Expected a single gitlab_project_pull_mirror to be created when mirror is true"
   }
 
   assert {
-    condition     = resource.gitlab_project.default.mirror == true
-    error_message = "Expected mirror to be: true, got: \"${resource.gitlab_project.default.mirror}\""
+    condition     = resource.gitlab_project_pull_mirror.default[0].url == "https://example.com/repo.git"
+    error_message = "Expected pull mirror url to be: \"https://example.com/repo.git\", got: \"${nonsensitive(resource.gitlab_project_pull_mirror.default[0].url)}\""
+  }
+
+  assert {
+    condition     = resource.gitlab_project_pull_mirror.default[0].mirror_trigger_builds == true
+    error_message = "Expected mirror_trigger_builds to be: true"
+  }
+
+  assert {
+    condition     = resource.gitlab_project_pull_mirror.default[0].mirror_overwrites_diverged_branches == true
+    error_message = "Expected mirror_overwrites_diverged_branches to be: true"
+  }
+
+  assert {
+    condition     = length(resource.gitlab_branch_protection.default) == 0
+    error_message = "Branch protection should not be configured when mirroring with overwrite of diverged branches"
+  }
+}
+
+run "import_url_with_mirror_and_credentials" {
+  variables {
+    name                = "basic-${run.setup.random_string}"
+    namespace           = "basic-${run.setup.random_string}"
+    import_url          = "https://example.com/repo.git"
+    import_url_username = "user"
+    import_url_password = "password"
+    mirror              = true
+  }
+
+  module {
+    source = "./"
+  }
+
+  command = plan
+
+  assert {
+    condition     = resource.gitlab_project_pull_mirror.default[0].auth_user == "user"
+    error_message = "Expected pull mirror auth_user to be: \"user\", got: \"${resource.gitlab_project_pull_mirror.default[0].auth_user}\""
+  }
+
+  assert {
+    condition     = resource.gitlab_project_pull_mirror.default[0].auth_password == "password"
+    error_message = "Expected pull mirror auth_password to be: \"password\", got: \"${nonsensitive(resource.gitlab_project_pull_mirror.default[0].auth_password)}\""
+  }
+}
+
+run "import_url_without_mirror" {
+  variables {
+    name       = "basic-${run.setup.random_string}"
+    namespace  = "basic-${run.setup.random_string}"
+    import_url = "https://example.com/repo.git"
+  }
+
+  module {
+    source = "./"
+  }
+
+  command = plan
+
+  assert {
+    condition     = length(resource.gitlab_project_pull_mirror.default) == 0
+    error_message = "Expected no gitlab_project_pull_mirror to be created when mirror is false"
   }
 }
 

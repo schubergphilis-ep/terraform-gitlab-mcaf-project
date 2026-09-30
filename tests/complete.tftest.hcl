@@ -101,13 +101,13 @@ run "defaults" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].merge_access_level == "developer"
-    error_message = "Invalid merge_access_level value"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_merge : entry.access_level], "developer")
+    error_message = "Invalid merge access level value"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].push_access_level == "no one"
-    error_message = "Invalid push_access_level value"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_push : entry.access_level], "no one")
+    error_message = "Invalid push access level value"
   }
 
   assert {
@@ -181,8 +181,10 @@ run "complete" {
         code_owner_approval_required = true
         merge_access_level           = "maintainer"
         push_access_level            = "no one"
+        unprotect_access_level       = "maintainer"
         users_allowed_to_push        = ["user1"]
         groups_allowed_to_merge      = ["foo/group1"]
+        groups_allowed_to_unprotect  = ["foo/group1"]
       }
       develop = {
         allow_force_push             = true
@@ -305,23 +307,28 @@ run "complete" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].merge_access_level == "maintainer"
-    error_message = "Invalid merge_access_level value on main branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_merge : entry.access_level], "maintainer")
+    error_message = "Invalid merge access level value on main branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].push_access_level == "no one"
-    error_message = "Invalid push_access_level value on main branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_push : entry.access_level], "no one")
+    error_message = "Invalid push access level value on main branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].allowed_to_merge != null
-    error_message = "allowed_to_merge object should not be null on main branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_merge : entry.group_id], 12345)
+    error_message = "Group foo/group1 should be allowed to merge on main branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].allowed_to_push != null
-    error_message = "allowed_to_push object should not be null on main branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_push : entry.user_id], 67890)
+    error_message = "User user1 should be allowed to push on main branch"
+  }
+
+  assert {
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["main"].allowed_to_unprotect : entry.access_level], "maintainer")
+    error_message = "Invalid unprotect access level value on main branch"
   }
 
   assert {
@@ -335,23 +342,13 @@ run "complete" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].merge_access_level == "developer"
-    error_message = "Invalid merge_access_level value on develop branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["develop"].allowed_to_merge : entry.access_level], "developer")
+    error_message = "Invalid merge access level value on develop branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].push_access_level == "developer"
-    error_message = "Invalid push_access_level value on develop branch"
-  }
-
-  assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].allowed_to_merge != null
-    error_message = "allowed_to_merge object should not be null on develop branch"
-  }
-
-  assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].allowed_to_push != null
-    error_message = "allowed_to_push object should not be null on develop branch"
+    condition     = contains([for entry in resource.gitlab_branch_protection.default["develop"].allowed_to_push : entry.access_level], "developer")
+    error_message = "Invalid push access level value on develop branch"
   }
 
   assert {
