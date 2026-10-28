@@ -134,7 +134,8 @@ data "gitlab_group" "groups" {
 
 resource "gitlab_branch_protection" "default" {
   # Do not configure branch protection if we are mirroring from another repository and overwriting diverged branches.
-  for_each = var.mirror && var.mirror_overwrites_diverged_branches ? {} : local.branch_protection
+  # A for expression is used instead of a conditional, as the entries in local.branch_protection can have different types.
+  for_each = { for branch, settings in local.branch_protection : branch => settings if !(var.mirror && var.mirror_overwrites_diverged_branches) }
 
   #checkov:skip=CKV_GLB_2: False positive, default is true
   allow_force_push             = try(each.value.allow_force_push, false)
