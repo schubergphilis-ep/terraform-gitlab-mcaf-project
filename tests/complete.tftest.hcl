@@ -10,6 +10,12 @@ mock_provider "gitlab" {
       id = "67890"
     }
   }
+
+  mock_data "gitlab_metadata" {
+    defaults = {
+      enterprise = true
+    }
+  }
 }
 
 run "setup" {
@@ -61,6 +67,11 @@ run "defaults" {
   }
 
   assert {
+    condition     = resource.gitlab_project.default.mr_default_title_template == null
+    error_message = "Invalid mr_default_title_template value"
+  }
+
+  assert {
     condition     = resource.gitlab_project.default.snippets_access_level == "disabled"
     error_message = "Invalid snippets_access_level value"
   }
@@ -101,13 +112,18 @@ run "defaults" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].merge_access_level == "developer"
-    error_message = "Invalid merge_access_level value"
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].merge) == jsonencode([{ access_level = "developer" }])
+    error_message = "Invalid allowed_to_merge value"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].push_access_level == "no one"
-    error_message = "Invalid push_access_level value"
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].push) == jsonencode([{ access_level = "no one" }])
+    error_message = "Invalid allowed_to_push value"
+  }
+
+  assert {
+    condition     = length(local.branch_protection_allowed_to["main"].unprotect) == 0
+    error_message = "allowed_to_unprotect should not be set"
   }
 
   assert {
@@ -166,6 +182,7 @@ run "complete" {
     description                                      = "test project"
     initialize_with_readme                           = true
     issues_access_level                              = "enabled"
+    mr_default_title_template                        = "Deploy VPB-0000 to ENV"
     prevent_secrets                                  = false
     squash_option                                    = "always"
     remove_source_branch_after_merge                 = false
@@ -260,6 +277,11 @@ run "complete" {
   }
 
   assert {
+    condition     = resource.gitlab_project.default.mr_default_title_template == "Deploy VPB-0000 to ENV"
+    error_message = "Invalid mr_default_title_template value"
+  }
+
+  assert {
     condition     = resource.gitlab_project.default.snippets_access_level == "enabled"
     error_message = "Invalid snippets_access_level value"
   }
@@ -305,13 +327,13 @@ run "complete" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].merge_access_level == "maintainer"
-    error_message = "Invalid merge_access_level value on main branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].merge) == jsonencode([{ access_level = "maintainer" }, { group_id = "12345" }])
+    error_message = "Invalid allowed_to_merge value on main branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["main"].push_access_level == "no one"
-    error_message = "Invalid push_access_level value on main branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].push) == jsonencode([{ access_level = "no one" }, { user_id = "67890" }])
+    error_message = "Invalid allowed_to_push value on main branch"
   }
 
   assert {
@@ -335,13 +357,13 @@ run "complete" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].merge_access_level == "developer"
-    error_message = "Invalid merge_access_level value on develop branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["develop"].merge) == jsonencode([{ access_level = "developer" }, { group_id = "12345" }])
+    error_message = "Invalid allowed_to_merge value on develop branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].push_access_level == "developer"
-    error_message = "Invalid push_access_level value on develop branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["develop"].push) == jsonencode([{ access_level = "developer" }, { user_id = "67890" }])
+    error_message = "Invalid allowed_to_push value on develop branch"
   }
 
   assert {

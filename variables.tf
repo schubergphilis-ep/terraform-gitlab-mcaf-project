@@ -165,6 +165,12 @@ variable "mirror_trigger_builds" {
   nullable    = false
 }
 
+variable "mr_default_title_template" {
+  type        = string
+  default     = null
+  description = "Template used to set the default title of merge requests."
+}
+
 variable "name" {
   type        = string
   description = "The name of the project"

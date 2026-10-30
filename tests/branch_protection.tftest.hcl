@@ -10,6 +10,12 @@ mock_provider "gitlab" {
       id = "67890"
     }
   }
+
+  mock_data "gitlab_metadata" {
+    defaults = {
+      enterprise = true
+    }
+  }
 }
 
 run "setup" {
@@ -43,13 +49,13 @@ run "default_branch_not_in_branch_protection" {
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].merge_access_level == "developer"
-    error_message = "Invalid merge_access_level on default branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["develop"].merge) == jsonencode([{ access_level = "developer" }])
+    error_message = "Invalid allowed_to_merge on default branch"
   }
 
   assert {
-    condition     = resource.gitlab_branch_protection.default["develop"].push_access_level == "no one"
-    error_message = "Invalid push_access_level on default branch"
+    condition     = jsonencode(local.branch_protection_allowed_to["develop"].push) == jsonencode([{ access_level = "no one" }])
+    error_message = "Invalid allowed_to_push on default branch"
   }
 
   assert {
@@ -63,8 +69,84 @@ run "default_branch_not_in_branch_protection" {
   }
 
   assert {
-    condition     = length(resource.gitlab_branch_protection.default["main"].allowed_to_push) == 1
-    error_message = "Expected one user allowed to push on main"
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].push) == jsonencode([{ access_level = "no one" }, { user_id = "67890" }])
+    error_message = "Expected the no one access level and one user allowed to push on main"
+  }
+}
+
+run "enterprise_unprotect_access_level" {
+  variables {
+    name      = "basic-${run.setup.random_string}"
+    namespace = "basic-${run.setup.random_string}"
+
+    branch_protection = {
+      main = {
+        unprotect_access_level      = "maintainer"
+        groups_allowed_to_unprotect = ["foo/group1"]
+      }
+    }
+  }
+
+  module {
+    source = "./"
+  }
+
+  command = plan
+
+  assert {
+    condition     = jsonencode(local.branch_protection_allowed_to["main"].unprotect) == jsonencode([{ access_level = "maintainer" }, { group_id = "12345" }])
+    error_message = "Expected unprotect_access_level to be passed as an access_level entry of allowed_to_unprotect"
+  }
+
+  assert {
+    condition     = resource.gitlab_branch_protection.default["main"].allowed_to_unprotect != null
+    error_message = "allowed_to_unprotect should be set on main"
+  }
+}
+
+run "community_edition" {
+  variables {
+    name      = "basic-${run.setup.random_string}"
+    namespace = "basic-${run.setup.random_string}"
+
+    branch_protection = {
+      main = {
+        merge_access_level = "maintainer"
+        push_access_level  = "developer"
+      }
+    }
+  }
+
+  module {
+    source = "./"
+  }
+
+  override_data {
+    target = data.gitlab_metadata.default
+    values = {
+      enterprise = false
+    }
+  }
+
+  command = plan
+
+  assert {
+    condition     = resource.gitlab_branch_protection.default["main"].merge_access_level == "maintainer"
+    error_message = "Invalid merge_access_level on CE"
+  }
+
+  assert {
+    condition     = resource.gitlab_branch_protection.default["main"].push_access_level == "developer"
+    error_message = "Invalid push_access_level on CE"
+  }
+
+  assert {
+    condition = alltrue([
+      length(local.branch_protection_allowed_to["main"].merge) == 0,
+      length(local.branch_protection_allowed_to["main"].push) == 0,
+      length(local.branch_protection_allowed_to["main"].unprotect) == 0,
+    ])
+    error_message = "allowed_to_* should not be set on CE"
   }
 }
 
