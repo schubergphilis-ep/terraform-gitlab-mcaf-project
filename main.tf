@@ -61,6 +61,7 @@ data "gitlab_group" "default" {
 }
 
 resource "gitlab_project" "default" {
+  #checkov:skip=CKV_GLB_1: Approvals are managed by gitlab_project_approval_rule, as approvals_before_merge was removed from gitlab_project
   name                                             = var.name
   archive_on_destroy                               = var.archive_on_destroy
   ci_config_path                                   = var.ci_config_path
