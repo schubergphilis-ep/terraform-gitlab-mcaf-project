@@ -128,6 +128,12 @@ variable "initialize_with_readme" {
   description = "Create default branch with first commit containing a README.md file"
 }
 
+variable "issue_branch_template" {
+  type        = string
+  default     = null
+  description = "Template for branch names suggested when creating a branch from an issue. Escape GitLab placeholders by doubling their percent sign (`%%`)."
+}
+
 variable "issues_access_level" {
   type        = string
   default     = "disabled"
@@ -168,7 +174,7 @@ variable "mirror_trigger_builds" {
 variable "mr_default_title_template" {
   type        = string
   default     = null
-  description = "Template used to set the default title of merge requests."
+  description = "Template used to set the default title of merge requests. Escape GitLab placeholders by doubling their percent sign (`%%`)."
 }
 
 variable "name" {

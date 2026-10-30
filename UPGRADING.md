@@ -13,9 +13,12 @@ This document captures required refactoring on your part when upgrading to a mod
 
 ### Variables
 
-The following variable has been added:
+The following variables have been added:
 
+- `issue_branch_template` sets the template for branch names suggested when creating a branch from an issue. It defaults to `null`.
 - `mr_default_title_template` sets the template used for the default title of merge requests. It defaults to `null`.
+
+Both templates support GitLab placeholders such as `%{id}`. As `%{` starts a template directive in Terraform strings, write them with a double percent sign, for example `"feature/%%{id}-%%{title}"`.
 
 No variables were removed or renamed.
 
@@ -24,7 +27,7 @@ No variables were removed or renamed.
 - Upgrade the GitLab provider to `>= 19.3.0` in the calling configuration.
 - Run `terraform plan`. On EE instances, the provider upgrades the state of existing `gitlab_branch_protection` resources, and in most cases the plan shows no changes for them. When the push or merge rules of a protected branch in GitLab only list users or groups, the plan adds the access level configured in this module as an `access_level` entry (for example `no one` for push). Review these changes before applying.
 - GitLab provider 19.3 manages `mr_default_title_template` on `gitlab_project`. If a project has a merge request title template that was configured outside of Terraform, set `mr_default_title_template` to keep it, otherwise it is removed on apply.
-- GitLab provider 19.2 manages `issue_branch_template` on `gitlab_project`, which this module does not set. Values for this setting that were configured outside of Terraform are removed on apply.
+- GitLab provider 19.2 manages `issue_branch_template` on `gitlab_project`. If a project has an issue branch template that was configured outside of Terraform, set `issue_branch_template` to keep it, otherwise it is removed on apply.
 - When `mirror = true`, a `gitlab_project_pull_mirror` resource is created and `import_url_username` and `import_url_password` are removed from `gitlab_project`. As described in the provider upgrade guide, the `gitlab_project` update removes the mirror and the `gitlab_project_pull_mirror` resource adds it back in the same apply.
 
 ## Upgrading to v1.0.0

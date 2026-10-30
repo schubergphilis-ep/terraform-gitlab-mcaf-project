@@ -72,6 +72,7 @@ resource "gitlab_project" "default" {
   import_url_password                              = var.mirror ? null : var.import_url_password
   import_url_username                              = var.mirror ? null : var.import_url_username
   initialize_with_readme                           = var.import_url != null ? null : var.initialize_with_readme
+  issue_branch_template                            = var.issue_branch_template
   issues_access_level                              = var.issues_access_level
   mr_default_title_template                        = var.mr_default_title_template
   namespace_id                                     = data.gitlab_group.default.id

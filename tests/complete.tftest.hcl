@@ -67,6 +67,11 @@ run "defaults" {
   }
 
   assert {
+    condition     = resource.gitlab_project.default.issue_branch_template == null
+    error_message = "Invalid issue_branch_template value"
+  }
+
+  assert {
     condition     = resource.gitlab_project.default.mr_default_title_template == null
     error_message = "Invalid mr_default_title_template value"
   }
@@ -181,8 +186,9 @@ run "complete" {
     default_branch                                   = "main"
     description                                      = "test project"
     initialize_with_readme                           = true
+    issue_branch_template                            = "feature/%%{id}-%%{title}"
     issues_access_level                              = "enabled"
-    mr_default_title_template                        = "Deploy VPB-0000 to ENV"
+    mr_default_title_template                        = "Draft: %%{title_from_branch}"
     prevent_secrets                                  = false
     squash_option                                    = "always"
     remove_source_branch_after_merge                 = false
@@ -277,7 +283,12 @@ run "complete" {
   }
 
   assert {
-    condition     = resource.gitlab_project.default.mr_default_title_template == "Deploy VPB-0000 to ENV"
+    condition     = resource.gitlab_project.default.issue_branch_template == "feature/%%{id}-%%{title}"
+    error_message = "Invalid issue_branch_template value"
+  }
+
+  assert {
+    condition     = resource.gitlab_project.default.mr_default_title_template == "Draft: %%{title_from_branch}"
     error_message = "Invalid mr_default_title_template value"
   }
 
