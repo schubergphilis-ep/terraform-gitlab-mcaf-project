@@ -10,13 +10,13 @@ IMPORTANT: We do not pin modules to versions in our examples. We highly recommen
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_gitlab"></a> [gitlab](#requirement\_gitlab) | >= 17.10.0 |
+| <a name="requirement_gitlab"></a> [gitlab](#requirement\_gitlab) | >= 19.3.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | >= 17.10.0 |
+| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | >= 19.3.0 |
 
 ## Modules
 
@@ -31,10 +31,12 @@ No modules.
 | [gitlab_project.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project) | resource |
 | [gitlab_project_approval_rule.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_approval_rule) | resource |
 | [gitlab_project_level_mr_approvals.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_level_mr_approvals) | resource |
+| [gitlab_project_pull_mirror.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_pull_mirror) | resource |
 | [gitlab_project_variable.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/resources/project_variable) | resource |
 | [gitlab_group.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/group) | data source |
 | [gitlab_group.groups](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/group) | data source |
 | [gitlab_group.project_approval_rule_groups](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/group) | data source |
+| [gitlab_metadata.default](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/metadata) | data source |
 | [gitlab_user.project_approval_rule_users](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/user) | data source |
 | [gitlab_user.users](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/user) | data source |
 
@@ -56,11 +58,13 @@ No modules.
 | <a name="input_import_url_password"></a> [import\_url\_password](#input\_import\_url\_password) | Password for the `import_url` | `string` | `null` | no |
 | <a name="input_import_url_username"></a> [import\_url\_username](#input\_import\_url\_username) | Username for the `import_url` | `string` | `null` | no |
 | <a name="input_initialize_with_readme"></a> [initialize\_with\_readme](#input\_initialize\_with\_readme) | Create default branch with first commit containing a README.md file | `bool` | `true` | no |
+| <a name="input_issue_branch_template"></a> [issue\_branch\_template](#input\_issue\_branch\_template) | Template for branch names suggested when creating a branch from an issue. Escape GitLab placeholders by doubling their percent sign (`%%`). | `string` | `null` | no |
 | <a name="input_issues_access_level"></a> [issues\_access\_level](#input\_issues\_access\_level) | Set the issues access level. Valid values are "disabled", "private", "enabled". | `string` | `"disabled"` | no |
 | <a name="input_merge_request_approval_rule"></a> [merge\_request\_approval\_rule](#input\_merge\_request\_approval\_rule) | Allows to manage the lifecycle of a Merge Request-level approval rule. | <pre>object({<br/>    disable_overriding_approvers_per_merge_request = optional(bool, false)<br/>    merge_requests_author_approval                 = optional(bool, false)<br/>    merge_requests_disable_committers_approval     = optional(bool, false)<br/>    reset_approvals_on_push                        = optional(bool, true)<br/>  })</pre> | `{}` | no |
 | <a name="input_mirror"></a> [mirror](#input\_mirror) | Set to true if you want to create a mirror repository | `bool` | `false` | no |
 | <a name="input_mirror_overwrites_diverged_branches"></a> [mirror\_overwrites\_diverged\_branches](#input\_mirror\_overwrites\_diverged\_branches) | If true, diverged branches will be overwritten during mirroring | `bool` | `true` | no |
 | <a name="input_mirror_trigger_builds"></a> [mirror\_trigger\_builds](#input\_mirror\_trigger\_builds) | If true, a pipeline will be triggered when a mirror update occurs | `bool` | `true` | no |
+| <a name="input_mr_default_title_template"></a> [mr\_default\_title\_template](#input\_mr\_default\_title\_template) | Template used to set the default title of merge requests. Escape GitLab placeholders by doubling their percent sign (`%%`). | `string` | `null` | no |
 | <a name="input_only_allow_merge_if_all_discussions_are_resolved"></a> [only\_allow\_merge\_if\_all\_discussions\_are\_resolved](#input\_only\_allow\_merge\_if\_all\_discussions\_are\_resolved) | Set to true if you want allow merges only if all discussions are resolved. | `bool` | `false` | no |
 | <a name="input_only_allow_merge_if_pipeline_succeeds"></a> [only\_allow\_merge\_if\_pipeline\_succeeds](#input\_only\_allow\_merge\_if\_pipeline\_succeeds) | Set to true if you want allow merges only if a pipeline succeeds. | `bool` | `false` | no |
 | <a name="input_pipeline_schedule"></a> [pipeline\_schedule](#input\_pipeline\_schedule) | Pipeline scheduler parameter. | <pre>object({<br/>    active         = optional(bool, true)<br/>    cron           = string<br/>    cron_timezone  = optional(string, "UTC")<br/>    description    = string<br/>    ref            = optional(string, "refs/heads/main")<br/>    take_ownership = optional(bool, false)<br/>  })</pre> | `null` | no |
