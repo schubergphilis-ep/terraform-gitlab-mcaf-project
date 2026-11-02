@@ -8,6 +8,7 @@ locals {
       groups_allowed_to_unprotect  = []
       merge_access_level           = "developer"
       push_access_level            = "no one"
+      unprotect_access_level       = null
       users_allowed_to_merge       = []
       users_allowed_to_push        = []
       users_allowed_to_unprotect   = []
@@ -24,6 +25,30 @@ locals {
     distinct(concat(settings.groups_allowed_to_merge, settings.groups_allowed_to_push, settings.groups_allowed_to_unprotect))
   ]))
 
+  // GitLab provider >= 19.0 only accepts merge_access_level and push_access_level on CE instances, and only accepts the
+  // allowed_to_* attributes on EE instances. On EE instances the access levels are passed as access_level entries instead.
+  enterprise = data.gitlab_metadata.default.enterprise
+
+  branch_protection_allowed_to = {
+    for branch, settings in local.branch_protection : branch => {
+      merge = concat(
+        local.enterprise ? [{ access_level = settings.merge_access_level }] : [],
+        [for user in settings.users_allowed_to_merge : { user_id = data.gitlab_user.users[user].id }],
+        [for group in settings.groups_allowed_to_merge : { group_id = data.gitlab_group.groups[group].id }],
+      )
+      push = concat(
+        local.enterprise ? [{ access_level = settings.push_access_level }] : [],
+        [for user in settings.users_allowed_to_push : { user_id = data.gitlab_user.users[user].id }],
+        [for group in settings.groups_allowed_to_push : { group_id = data.gitlab_group.groups[group].id }],
+      )
+      unprotect = concat(
+        settings.unprotect_access_level != null ? [{ access_level = settings.unprotect_access_level }] : [],
+        [for user in settings.users_allowed_to_unprotect : { user_id = data.gitlab_user.users[user].id }],
+        [for group in settings.groups_allowed_to_unprotect : { group_id = data.gitlab_group.groups[group].id }],
+      )
+    }
+  }
+
   pipeline_schedule_enabled = var.pipeline_schedule != null ? true : false
 }
 
@@ -36,20 +61,20 @@ data "gitlab_group" "default" {
 }
 
 resource "gitlab_project" "default" {
+  #checkov:skip=CKV_GLB_1: Approvals are managed by gitlab_project_approval_rule, as approvals_before_merge was removed from gitlab_project
   name                                             = var.name
   archive_on_destroy                               = var.archive_on_destroy
   ci_config_path                                   = var.ci_config_path
   ci_default_git_depth                             = var.ci_default_git_depth
   default_branch                                   = var.default_branch
   description                                      = var.description
-  import_url                                       = var.import_url
-  import_url_password                              = var.import_url_password
-  import_url_username                              = var.import_url_username
+  import_url                                       = var.mirror ? null : var.import_url # Mirrors are configured by gitlab_project_pull_mirror
+  import_url_password                              = var.mirror ? null : var.import_url_password
+  import_url_username                              = var.mirror ? null : var.import_url_username
   initialize_with_readme                           = var.import_url != null ? null : var.initialize_with_readme
+  issue_branch_template                            = var.issue_branch_template
   issues_access_level                              = var.issues_access_level
-  mirror                                           = var.mirror ? true : null # We cannot use false here, so either we set true or null
-  mirror_trigger_builds                            = var.mirror ? var.mirror_trigger_builds : null
-  mirror_overwrites_diverged_branches              = var.mirror ? var.mirror_overwrites_diverged_branches : null
+  mr_default_title_template                        = var.mr_default_title_template
   namespace_id                                     = data.gitlab_group.default.id
   only_allow_merge_if_all_discussions_are_resolved = var.only_allow_merge_if_all_discussions_are_resolved
   only_allow_merge_if_pipeline_succeeds            = var.only_allow_merge_if_pipeline_succeeds
@@ -64,6 +89,17 @@ resource "gitlab_project" "default" {
     prevent_secrets         = var.prevent_secrets
     reject_unsigned_commits = var.reject_unsigned_commits
   }
+}
+
+resource "gitlab_project_pull_mirror" "default" {
+  count = var.mirror ? 1 : 0
+
+  project                             = gitlab_project.default.id
+  url                                 = var.import_url
+  auth_user                           = var.import_url_username
+  auth_password                       = var.import_url_password
+  mirror_trigger_builds               = var.mirror_trigger_builds
+  mirror_overwrites_diverged_branches = var.mirror_overwrites_diverged_branches
 }
 
 resource "gitlab_project_variable" "default" {
@@ -120,6 +156,8 @@ resource "gitlab_project_approval_rule" "default" {
 # Branch protection
 ################################################################################
 
+data "gitlab_metadata" "default" {}
+
 data "gitlab_user" "users" {
   for_each = local.users
 
@@ -134,64 +172,21 @@ data "gitlab_group" "groups" {
 
 resource "gitlab_branch_protection" "default" {
   # Do not configure branch protection if we are mirroring from another repository and overwriting diverged branches.
-  for_each = var.mirror && var.mirror_overwrites_diverged_branches ? {} : local.branch_protection
+  # A for expression is used instead of a conditional, as the entries in local.branch_protection can have different types.
+  for_each = { for branch, settings in local.branch_protection : branch => settings if !(var.mirror && var.mirror_overwrites_diverged_branches) }
 
   #checkov:skip=CKV_GLB_2: False positive, default is true
   allow_force_push             = try(each.value.allow_force_push, false)
   branch                       = each.key
   code_owner_approval_required = each.value.code_owner_approval_required
-  merge_access_level           = each.value.merge_access_level
+  merge_access_level           = local.enterprise ? null : each.value.merge_access_level
   project                      = gitlab_project.default.id
-  push_access_level            = each.value.push_access_level
-  unprotect_access_level       = try(each.value.unprotect_access_level, null)
+  push_access_level            = local.enterprise ? null : each.value.push_access_level
 
-  dynamic "allowed_to_merge" {
-    for_each = each.value.users_allowed_to_merge
-
-    content {
-      user_id = data.gitlab_user.users[allowed_to_merge.value].id
-    }
-  }
-
-  dynamic "allowed_to_merge" {
-    for_each = each.value.groups_allowed_to_merge
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_merge.value].id
-    }
-  }
-
-  dynamic "allowed_to_push" {
-    for_each = each.value.users_allowed_to_push
-
-    content {
-      user_id = data.gitlab_user.users[allowed_to_push.value].id
-    }
-  }
-
-  dynamic "allowed_to_push" {
-    for_each = each.value.groups_allowed_to_push
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_push.value].id
-    }
-  }
-
-  dynamic "allowed_to_unprotect" {
-    for_each = each.value.users_allowed_to_unprotect
-
-    content {
-      user_id = data.gitlab_user.users[allowed_to_unprotect.value].id
-    }
-  }
-
-  dynamic "allowed_to_unprotect" {
-    for_each = each.value.groups_allowed_to_unprotect
-
-    content {
-      group_id = data.gitlab_group.groups[allowed_to_unprotect.value].id
-    }
-  }
+  # Empty lists are passed as null, as CE instances reject any value for the allowed_to_* attributes.
+  allowed_to_merge     = length(local.branch_protection_allowed_to[each.key].merge) > 0 ? local.branch_protection_allowed_to[each.key].merge : null
+  allowed_to_push      = length(local.branch_protection_allowed_to[each.key].push) > 0 ? local.branch_protection_allowed_to[each.key].push : null
+  allowed_to_unprotect = length(local.branch_protection_allowed_to[each.key].unprotect) > 0 ? local.branch_protection_allowed_to[each.key].unprotect : null
 }
 
 ################################################################################
