@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0](https://github.com/schubergphilis-ep/terraform-gitlab-mcaf-project/compare/v1.1.0...v2.0.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* the module now requires GitLab provider >= 19.3.0. See UPGRADING.md for the expected plan changes.
+
+### 🚀 Features
+
+* support GitLab provider 19 ([#2](https://github.com/schubergphilis-ep/terraform-gitlab-mcaf-project/issues/2)) ([f1f0cb5](https://github.com/schubergphilis-ep/terraform-gitlab-mcaf-project/commit/f1f0cb5b57d8b1b4b8363073d50947974e5b68fa))
+
 ## [1.1.0](https://github.com/schubergphilis-ep/terraform-gitlab-mcaf-project/compare/v1.0.0...v1.1.0) (2026-03-19)
 
 
@@ -104,4 +115,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * update module settings ([#3](https://github.com/schubergphilis/terraform-gitlab-mcaf-project/pull/3)) ([1acde9c](https://github.com/schubergphilis-ep/terraform-gitlab-mcaf-project/commit/1acde9caf903f7a6364783b953f61a594ce7a121))
 
 ## 0.1.0 (2023-08-16)
-
